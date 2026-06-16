@@ -45,7 +45,7 @@ tauri-plugin-store = "2"
 tempfile = "3"
 sha2 = "0.10"
 gethostname = "0.5"
-rust-i18n = "3"
+rust-i18n = "4"
 # RW-16 (L8): OS-backed secret storage for API keys. Platform credential
 # stores are enabled per-target below (apple-native / windows-native /
 # sync-secret-service); the base dep carries no platform backend so it stays
