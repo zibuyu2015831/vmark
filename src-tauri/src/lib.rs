@@ -559,7 +559,7 @@ fn machine_id_hash() -> String {
         std::env::consts::OS,
         std::env::consts::ARCH,
     );
-    format!("{:x}", Sha256::digest(input.as_bytes()))
+    Sha256::digest(input.as_bytes()).iter().map(|b| format!("{:02x}", b)).collect()
 }
 
 /// Build and run the Tauri application with all plugins, commands, and event handlers.
@@ -596,7 +596,7 @@ pub fn run() {
             let mid = machine_id_hash();
             tauri_plugin_updater::Builder::new()
                 .header("X-Machine-Id", mid)
-                // Infallible: `mid` is a lowercase hex string from `format!("{:x}", Sha256::digest(..))`,
+                // Infallible: `mid` is a lowercase hex string (hex-encoded Sha256),
                 // so it only ever contains [0-9a-f] — always a valid ASCII HTTP header value.
                 .expect("machine id hash is always valid ASCII hex")
                 .build()

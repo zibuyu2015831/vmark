@@ -173,7 +173,7 @@ pub fn cache_path(app: &AppHandle, uses: &str) -> Result<PathBuf, String> {
         .join("gha-action-cache");
     let mut hasher = Sha256::new();
     hasher.update(uses.as_bytes());
-    let hash = format!("{:x}", hasher.finalize());
+    let hash: String = hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect();
     Ok(dir.join(format!("{}.json", hash)))
 }
 
