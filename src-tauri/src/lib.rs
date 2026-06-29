@@ -11,7 +11,9 @@
 //!     files are accepted; other extensions are skipped. Hot opens (app already
 //!     running) use `app.emit()` (global broadcast) — NOT `window.emit()` — so the
 //!     frontend's global `listen()` in `useFinderFileOpen` receives them. Tauri v2
-//!     webview-specific events are not delivered to global `listen()`.
+//!     webview-specific events are not delivered to global `listen()`. The hot-open
+//!     path also raises + focuses the main window after emitting, because macOS does
+//!     not foreground an already-running instance on `RunEvent::Opened`.
 //!   - macOS Reopen event (dock click) creates a new main window when none visible,
 //!     restoring the user's most-recent workspace via
 //!     `window_manager::pick_reopen_workspace_root` so closing the last tab and
@@ -774,7 +776,9 @@ fn handle_finder_opened(app: &tauri::AppHandle, urls: Vec<tauri::Url>) {
     }
 }
 
-/// Emit decided Finder opens to the main window, re-queueing if the window
+/// Emit decided Finder opens to the main window, then raise + focus it so the
+/// freshly-opened file is actually visible (macOS does not foreground an
+/// already-running instance on RunEvent::Opened). Re-queues if the window
 /// vanished between the decision and the emit (the decision is made under the
 /// lock based on the main window existing THEN; `app.emit` is a global
 /// broadcast that returns Ok even with no listener).
@@ -802,6 +806,18 @@ fn emit_finder_opens_to_main(app: &tauri::AppHandle, payloads: Vec<PendingFileOp
             log::warn!("[Finder] emit failed, queueing: {e}");
             failed.push(payload);
         }
+    }
+    // macOS delivers RunEvent::Opened to an already-running instance WITHOUT
+    // raising the window, so the file would load into a tab the user can't see.
+    // Raise + focus the main window explicitly (same idiom as
+    // tab_transfer::focus_existing_window). Guarded so it's a no-op if the
+    // window vanished between the decision and here.
+    if let Some(window) = app.get_webview_window("main") {
+        if window.is_minimized().unwrap_or(false) {
+            let _ = window.unminimize();
+        }
+        let _ = window.show();
+        let _ = window.set_focus();
     }
     if !failed.is_empty() {
         // Emit failed mid-flight — re-queue and reset readiness so the open
